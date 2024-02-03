@@ -15,157 +15,133 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QHBox
 
 matplotlib.use('Agg')
 
-class Validator(QValidator):  # 文本编辑验证器, 防止输入数字以外的其他信息
-    def validate(self, input_str, pos_int):  # 文本输入验证器,保证输入为数字,为文本时则不显示(输入文本,光标位置)
+class Validator(QValidator):  # text input validator
+    def validate(self, input_str, pos_int):  # text input validator
         try:  # try-except异常处理机制
-            if 0 <= float(input_str) <= 999999:  # 输入结果有效, 如若输入文本为字母则不显示
+            if 0 <= float(input_str) <= 999999:
                 return (QValidator.Acceptable, input_str, pos_int)
             else:
                 return (QValidator.Invalid, input_str, pos_int)
         except:
             if len(input_str) == 0:
-                return (QValidator.Intermediate, input_str, pos_int)  # 文本框清空则进入待定状态
-            return (QValidator.Invalid, input_str, pos_int)
+                return (QValidator.Intermediate, input_str, pos_int) 
 
 class Awp_plot_demo(QWidget):
-
-    #  通过类成员对象定义信号对象
-    # _startThread = pyqtSignal()
-
-    # 初始化
+    
+    # Initialization
     def __init__(self):
         super(Awp_plot_demo, self).__init__()
 
-        # 参数定义
+        # parameters definition
         self.ip = ''
         self.port = ''
-        self.socket_flag = 0  # socket建立标志
-        self.NFFT = 8192*2  # FFT点数设置
-        self.timeout = 1  # fpga返回数据等待时间
+        self.socket_flag = 0  # socket
+        self.NFFT = 8192*2  # FFT num
+        self.timeout = 1  # fpga timeout
         self.pic_path = 'spec_2.png'
-        self.AMPTITUD_MAX = 2 ** 16  # 幅度归一化值
-        self.buffuer_size = 1024  # 设置缓冲区大小
-        self.pen_sepc = pg.mkPen(color="#33FFCC")  # 频谱绘图颜色
-        self.pen_time_I = pg.mkPen(color="#1E90FF")  # 时域绘图颜色 I
-        self.pen_time_Q = pg.mkPen(color="#A52A2A")  # 时域绘图颜色 Q
+        self.AMPTITUD_MAX = 2 ** 16  # amp_normalized
+        self.buffuer_size = 1024  # buffersize
+        self.pen_sepc = pg.mkPen(color="#33FFCC")  # spec_plot color
+        self.pen_time_I = pg.mkPen(color="#1E90FF")  # time_plot I
+        self.pen_time_Q = pg.mkPen(color="#A52A2A")  # time_plot Q
 
-        self.file_name = './' + 'base_IQ' + '_'  # 设置IQ数据保存路径
-        self.styles = {"color": "#FFFFFF", "font-size": "20px"}  # 设置网格样式
+        self.file_name = './' + 'base_IQ' + '_'  # save path
+        self.styles = {"color": "#FFFFFF", "font-size": "20px"}
 
-        # 建立socket套接字
-        # self.sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        # self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.buffuer_size)  # 设置套接字层选项,并设置发送和接收缓冲区大小
-        # self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.buffuer_size)
-
-        # 左上方图片
+        # up left pic
         self.pix = QPixmap(self.pic_path)
         self.spec_pic = QLabel(self)
         self.spec_pic.setPixmap(self.pix)
         self.setWindowTitle('Usrp_Spectrum_Plot')
         self.setWindowIcon(QIcon('awp_logo.png'))
 
-        # 实例化文本框控件
-        self.IP = QLineEdit(self)  # IP输入框
-        self.port_num = QLineEdit(self)  # 端口号输入框
-        self.center_fre = QLineEdit(self)  # 中心频率输入框
-        self.sub_fre = QLineEdit(self)  # 子频率输入框
-        # self.sample_rate = QLineEdit(self)  # 采样率输入框
-        # self.duration = QLineEdit(self)  # 时间输入框
+        # QlineEdit
+        self.IP = QLineEdit(self)  # IP
+        self.port_num = QLineEdit(self)  # PORT
+        self.center_fre = QLineEdit(self)  # center_fre
+        self.sub_fre = QLineEdit(self)  # sub_fre
+        # self.sample_rate = QLineEdit(self)  # sample_rate
+        # self.duration = QLineEdit(self)  # time
 
-        # 设置文本框的默认浮现文本
-        # self.IP.setPlaceholderText('设备IP')
-        # self.port_num.setPlaceholderText('端口号')
         self.IP.setText('192.168.3.242')
         self.port_num.setText('7755')
-        self.center_fre.setPlaceholderText('中心频率:fc(MHz)')
-        self.sub_fre.setPlaceholderText('子频率:f_sub(MHz)')
-        # self.sample_rate.setPlaceholderText('采样率:fs(MHz),输入范围:0-3')
-        # self.duration.setPlaceholderText('采样时间:ts(s),输入范围:1-5')
+        self.center_fre.setPlaceholderText('fc(MHz)')
+        self.sub_fre.setPlaceholderText('f_sub(MHz)')
         self.IP.setStyleSheet('color:cyan')
         self.port_num.setStyleSheet('color:cyan')
         self.center_fre.setStyleSheet('color:cyan')
         self.sub_fre.setStyleSheet('color:cyan')
-        # self.sample_rate.setStyleSheet('color:cyan')
-        # self.duration.setStyleSheet('color:cyan')
-
-        # 下拉复选框控件
-        self.sample_rate = QComboBox(self)  # 采样率复选
-        self.duration = QComboBox(self)  # 采样时间复选
-        self.gain = QComboBox(self)  # 天线增益复选
+        
+        # QcomboBox
+        self.sample_rate = QComboBox(self)  # fs
+        self.duration = QComboBox(self)  # ts
+        self.gain = QComboBox(self)  # gain
         self.sample_rate.setStyleSheet("QComboBox{color:cyan}")
         self.duration.setStyleSheet("QComboBox{color:cyan}")
         self.gain.setStyleSheet("QComboBox{color:cyan}")
 
-        # 添加复选框条目
+        # add QcomboBox Items
         self.sample_rate.addItems(['122.88MHz', '61.44MHz', '30.72MHz', '15.36MHz'])
         self.duration.addItems(['10ms', '20ms', '30ms', '40ms', '50ms'])
         self.gain.addItems(['1', '10', '20', '30', '40', '55'])
 
-        # 设置验证器
-        validator = Validator()  # 实例化验证器
-        self.center_fre.setValidator(validator)  # 设置输入文本框验证器
-        self.sub_fre.setValidator(validator)  # 设置输入文本框验证器
-        self.port_num.setValidator(validator)  # 设置输入文本框验证器
+        # validator
+        validator = Validator() 
+        self.center_fre.setValidator(validator)  # input validator
+        self.sub_fre.setValidator(validator)  
+        self.port_num.setValidator(validator) 
 
-        # 实例化按钮控件
-        self.single = QPushButton('单次绘制', self)  # 单次载入数据
-        self.continuous = QPushButton('实时绘制', self)  # 持续载入数据
-        self.udp_connect = QPushButton('连接设备', self)  # 建立 fpga
-        self.udp_disconnect = QPushButton('断开设备', self)  # 断开 fpga
-        self.single.setFixedSize(110, 50)  # 设置按钮大小
-        self.continuous.setFixedSize(110, 50)  # 设置按钮大小
-        self.udp_connect.setFixedSize(110, 50)  # 设置按钮大小
-        self.udp_disconnect.setFixedSize(110, 50)  # 设置按钮大小
+        # QPushButton
+        self.single = QPushButton('单次绘制', self)  # single load
+        self.continuous = QPushButton('实时绘制', self)  # continuous load
+        self.udp_connect = QPushButton('连接设备', self)  # connect fpga
+        self.udp_disconnect = QPushButton('断开设备', self)  # discon fpga
+        self.single.setFixedSize(110, 50)  # resize button
+        self.continuous.setFixedSize(110, 50)  
+        self.udp_connect.setFixedSize(110, 50)  
+        self.udp_disconnect.setFixedSize(110, 50) 
         self.single.setStyleSheet("QPushButton""{""background-color : none;""}"
                              "QPushButton:pressed""{""background-color : cyan;""}"
-                             )  # 设置按下和释放后的背景颜色
+                             )  # set press and release background color
         self.continuous.setStyleSheet("QPushButton""{""background-color : none;""}"
                              "QPushButton:pressed""{""background-color : cyan;""}"
-                             )  # 设置按下和释放后的背景颜色
+                             )  # set press and release background color
         self.udp_connect.setStyleSheet("QPushButton""{""background-color : none;""}"
                              "QPushButton:pressed""{""background-color : cyan;""}"
-                             )  # 设置按下和释放后的背景颜色
+                             )  # set press and release background color
         self.udp_disconnect.setStyleSheet("QPushButton""{""background-color : none;""}"
                              "QPushButton:pressed""{""background-color : cyan;""}"
-                             )  # 设置按下和释放后的背景颜色
+                             )  # set press and release background color
 
-        # 实例化并设置频谱绘图对象控件
+        # spec_plot widget
         self.graph_plot_spec = pg.PlotWidget()
-        self.graph_plot_spec.setBackground('k')  # 设置图表标题和颜色
+        self.graph_plot_spec.setBackground('k')
         self.graph_plot_spec.setTitle("频谱图", color="w", size="14pt")
         self.graph_plot_spec.setLabel("bottom", "频率(MHz)", **self.styles)
         self.graph_plot_spec.setLabel("left", "功率谱密度(dB/Hz)", **self.styles)
-        self.graph_plot_spec.showGrid(x=True, y=True)  # 绘制网格线
-        # self.graph_plot_spec.setXRange(-16, 16)  # 设置y轴范围
+        self.graph_plot_spec.showGrid(x=True, y=True)  # plot grid
 
-        # 实例化并设置xx绘图对象控件
+        # time_plot widget
         self.graph_plot_time = pg.PlotWidget()
-        self.graph_plot_time.setBackground('k')  # 设置图表标题和颜色
+        self.graph_plot_time.setBackground('k') 
         self.graph_plot_time.setTitle("时域图", color="w", size="14pt")
         self.graph_plot_spec.setLabel("left", "幅度", **self.styles)
         self.graph_plot_time.setLabel("bottom", "时间(s)", **self.styles)
-        self.graph_plot_time.showGrid(x=True, y=True)  # 绘制网格线
+        self.graph_plot_time.showGrid(x=True, y=True)
 
-        # 实例化并设置xx绘图对象控件
-        self.graph_plot_2 = pg.PlotWidget()
-        self.graph_plot_2.setBackground('k')  # 设置图表标题和颜色
-        self.graph_plot_2.setTitle("时频图", color="w", size="14pt")
-        self.graph_plot_2.setLabel("bottom", "频率(MHz)", **self.styles)
-        self.graph_plot_2.showGrid(x=True, y=True)  # 绘制网格线
-
-        # 槽函数
-        self.udp_connect.clicked.connect(self.device_con)  # 与服务端连接
-        self.udp_disconnect.clicked.connect(self.device_discon)  # 与服务端断连
-        self.single.clicked.connect(self.single_trigger)   # 设置单次绘制
-        self.continuous.clicked.connect(self.continuous_trigger)   # 设置实时绘制
-        self.center_fre.editingFinished.connect(self.para_input)  # 结束编辑传值
-        self.sub_fre.editingFinished.connect(self.para_input)  # 结束编辑传值
-        self.sample_rate.activated.connect(self.para_input)  # 用户选中则发射该信号
-        self.duration.activated.connect(self.para_input)  # 用户选中则发射该信号
-        self.gain.activated.connect(self.para_input)  # 用户选中则发射该信号
-        self.IP.editingFinished.connect(self.ip_input)  # 结束编辑传值
-        self.port_num.editingFinished.connect(self.ip_input)  # 结束编辑传值
-        self.port_num.returnPressed.connect(self.ip_input_control)  # 回车之后不可编辑
+        # slot func
+        self.udp_connect.clicked.connect(self.device_con)  # connect
+        self.udp_disconnect.clicked.connect(self.device_discon)  # disconnect
+        self.single.clicked.connect(self.single_trigger)   # single plot
+        self.continuous.clicked.connect(self.continuous_trigger)   # continuous plot
+        self.center_fre.editingFinished.connect(self.para_input)  # editingFinished convey value
+        self.sub_fre.editingFinished.connect(self.para_input)  # editingFinished convey value
+        self.sample_rate.activated.connect(self.para_input)  # editingFinished convey value
+        self.duration.activated.connect(self.para_input)  # editingFinished convey value
+        self.gain.activated.connect(self.para_input)  # select and emit
+        self.IP.editingFinished.connect(self.ip_input)  # editingFinished convey value
+        self.port_num.editingFinished.connect(self.ip_input)  # editingFinished convey value
+        self.port_num.returnPressed.connect(self.ip_input_control)  # enter edit 
 
         # 界面布局
         self.trigger_h_layout = QHBoxLayout()  # 触发按钮布局
